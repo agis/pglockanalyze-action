@@ -23,10 +23,9 @@ RUN apt-get update -y && \
     rm -rf /var/lib/apt/lists/*
 
 # ---------- GitHub CLI ----------
-RUN type -p curl >/dev/null && \
-    curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | dd of=/usr/share/keyrings/githubcli.gpg && \
-    chmod go+r /usr/share/keyrings/githubcli.gpg && \
-    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list > /dev/null && \
+RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | dd of=/usr/share/keyrings/githubcli-gpg.gpg && \
+    chmod go+r /usr/share/keyrings/githubcli-gpg.gpg && \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-gpg.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list > /dev/null && \
     apt-get update -y && apt-get install -y gh && rm -rf /var/lib/apt/lists/*
 
 # ---------- Rust toolchain & pglockanalyze ----------
