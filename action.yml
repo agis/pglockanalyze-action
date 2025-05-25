@@ -1,0 +1,64 @@
+name: "pglockanalyze CI Action"
+description: >-
+  Runs pglockanalyze against the provided migrations/DDL during a pull
+  request, then posts inline comments that explain the locks each
+  statement acquires.
+author: "YOUR NAME <you@example.com>"
+branding:
+  icon: "unlock"
+  color: "blue"
+
+# ===== inputs =====
+inputs:
+  postgres-version:
+    description: "PostgreSQL major version to install & run"
+    required: false
+    default: "16"
+  db-name:
+    description: "Database name to create for analysis"
+    required: false
+    default: "pgladb"
+  db-user:
+    description: "Database user"
+    required: false
+    default: "pglauser"
+  db-password:
+    description: "Database user password"
+    required: false
+    default: "pglapass"
+  db-host:
+    description: "Database host (inside the action container)"
+    required: false
+    default: "localhost"
+  db-port:
+    description: "Database port"
+    required: false
+    default: "5432"
+  migrations:
+    description: >-
+      New‑line separated list containing **either** relative file paths
+      inside the repository **or** raw DDL statements to analyse.
+    required: true
+  cli-flags:
+    description: "Additional pglockanalyze CLI flags (optional)"
+    required: false
+  github-token:
+    description: "GitHub token with `pull‑requests:write` permission"
+    required: false
+    default: "${{ github.token }}"
+
+# ===== runtime =====
+runs:
+  using: "docker"
+  image: "Dockerfile"
+  entrypoint: "/entrypoint.sh"
+  env:
+    PGVERSION: "${{ inputs.postgres-version }}"
+    DB_NAME: "${{ inputs.db-name }}"
+    DB_USER: "${{ inputs.db-user }}"
+    DB_PASS: "${{ inputs.db-password }}"
+    DB_HOST: "${{ inputs.db-host }}"
+    DB_PORT: "${{ inputs.db-port }}"
+    MIGRATIONS: "${{ inputs.migrations }}"
+    CLI_FLAGS: "${{ inputs.cli-flags }}"
+    GITHUB_TOKEN: "${{ inputs.github-token }}"
