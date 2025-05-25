@@ -1,65 +1,86 @@
-# 🚦 pglockanalyze‑action
+# 🚦 pglockanalyze‑action (composite)
 
-A reusable **GitHub Action** that checks your PostgreSQL migrations for blocking locks *before* they reach production.  Powered by the [pglockanalyze](https://github.com/…) CLI.
-
----
-## ✨ Features
-* Spins up the exact PostgreSQL version you specify.
-* Installs `pglockanalyze` from crates.io on every run to ensure the latest release.
-* Accepts **migration files** *or* **inline DDL**.
-* Posts **inline** pull‑request comments showing the lock each statement would acquire.
+Composite GitHub Action that analyses PostgreSQL migrations for lock impact
+using the **pglockanalyze** CLI, then posts inline PR comments.
 
 ---
-## 📦 Inputs
-| Name | Required | Default | Description |
-|------|----------|---------|-------------|
-| `postgres-version` | ❌ | `16` | PostgreSQL major version to install & start |
-| `db-name` | ❌ | `pgladb` | Name of the database to create |
-| `db-user` | ❌ | `pglauser` | Database user |
-| `db-password` | ❌ | `pglapass` | Password for `db-user` |
-| `db-host` | ❌ | `localhost` | Host for connection string (inside container) |
-| `db-port` | ❌ | `5432` | Port for Postgres |
-| `migrations` | ✅ |  | New‑line separated list of **paths** or **DDL statements** |
-| `cli-flags` | ❌ |  | Additional flags forwarded to `pglockanalyze` |
-| `github-token` | ❌ | `${{ github.token }}` | Token used to post review comments |
+
+## How it works
+
+1. **You** declare a PostgreSQL **service container** in the job  
+   (any tag from `postgres:`—that’s where the version is chosen).
+2. The action installs `pglockanalyze` on the runner.
+3. Each migration file / inline DDL is executed inside a transaction; the
+   locks are captured and reported.
+4. Comments are posted on the pull‑request diff via the GitHub CLI.
 
 ---
-## 🚀 Usage
-Add a job to your workflow:
+
+## Example workflow
 
 ```yaml
-name: lock‑check
+name: lock-check
 on:
   pull_request:
     paths:
-      - "migrations/**.sql"
+      - "migrations/**/*.sql"
 
 jobs:
   analyze:
     runs-on: ubuntu-latest
-    permissions: { pull-requests: write }
+    permissions:
+      pull-requests: write
+
+    services:
+      db:
+        image: postgres:16
+        env:
+          POSTGRES_USER: pglauser
+          POSTGRES_PASSWORD: pglapass
+          POSTGRES_DB: pgladb
+        ports:
+          - 5432:5432
+
     steps:
       - uses: actions/checkout@v4
 
-      - name: pglockanalyze migrations
-        uses: YOURORG/pglockanalyze-action@v1
+      - name: pglockanalyze
+        uses: YOURORG/pglockanalyze-action@v2
         with:
-          postgres-version: 16
           migrations: |
             migrations/20240525_add_index.sql
-            ALTER TABLE users ALTER COLUMN email SET NOT NULL;
+            ALTER TABLE users ADD COLUMN last_seen timestamptz;
 ```
 
-The action will post comments directly on the modified lines **only if** the `location` data returned by the CLI includes a file path & line numbers; otherwise it falls back to a top‑level PR comment.
+Pick any Postgres image tag—`postgres:14`, `14-alpine`, `15`, `16`—the action
+adapts via its connection inputs.
 
 ---
-## 🛠 Development & Testing
-Clone this repo and run the [dev workflow](.github/workflows/test.yml) locally using [act](https://github.com/nektos/act):
+
+## Inputs
+
+| Name | Default | Description |
+|------|---------|-------------|
+| `db-host` | `localhost` | Host of the Postgres service |
+| `db-port` | `5432` | Port exposed by the service |
+| `db-name` | `pgladb` | Database name |
+| `db-user` | `pglauser` | Role used for analysis |
+| `db-password` | `pglapass` | Password for `db-user` |
+| `migrations` | *(required)* | List of file paths or raw DDL (newline‑separated) |
+| `cli-flags` | *(empty)* | Extra flags forwarded to `pglockanalyze` |
+| `github-token` | `${{ github.token }}` | Token used to post review comments |
+
+---
+
+## Local testing with **act**
 
 ```bash
-act pull_request -W .github/workflows/test.yml -P ubuntu-latest=ghcr.io/catthehacker/ubuntu:full-22.04
+export PGLA_ACTION_TOKEN=dummy   # set to PAT if you want gh comments
+
+act pull_request \
+  -P ubuntu-latest=ghcr.io/catthehacker/ubuntu:full-22.04 \
+  -s GITHUB_TOKEN=$PGLA_ACTION_TOKEN
 ```
 
----
-## 📄 License
-MIT
+The full runner image already contains Docker so the `postgres:` service
+container spins up automatically.

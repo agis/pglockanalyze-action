@@ -1,21 +1,25 @@
-name: "pglockanalyze CI Action"
-description: >-
-  Runs pglockanalyze against the provided migrations/DDL during a pull
-  request, then posts inline comments that explain the locks each
-  statement acquires.
-author: "YOUR NAME <you@example.com>"
+name: "pglockanalyze CI Action (composite)"
+description: >
+  Runs pglockanalyze against PostgreSQL schema migrations provided by the
+  caller and posts inline PR comments describing the locks each statement
+  acquires. Requires a PostgreSQL service container to be declared in the
+  workflow.
+
 branding:
   icon: "unlock"
   color: "blue"
 
-# ===== inputs =====
 inputs:
-  postgres-version:
-    description: "PostgreSQL major version to install & run"
+  db-host:
+    description: "PostgreSQL host"
     required: false
-    default: "16"
+    default: "localhost"
+  db-port:
+    description: "PostgreSQL port"
+    required: false
+    default: "5432"
   db-name:
-    description: "Database name to create for analysis"
+    description: "Database name"
     required: false
     default: "pgladb"
   db-user:
@@ -23,19 +27,11 @@ inputs:
     required: false
     default: "pglauser"
   db-password:
-    description: "Database user password"
+    description: "Database password"
     required: false
     default: "pglapass"
-  db-host:
-    description: "Database host (inside the action container)"
-    required: false
-    default: "localhost"
-  db-port:
-    description: "Database port"
-    required: false
-    default: "5432"
   migrations:
-    description: >-
+    description: |
       New‑line separated list containing **either** relative file paths
       inside the repository **or** raw DDL statements to analyse.
     required: true
@@ -47,18 +43,44 @@ inputs:
     required: false
     default: "${{ github.token }}"
 
-# ===== runtime =====
 runs:
-  using: "docker"
-  image: "Dockerfile"
-  entrypoint: "/entrypoint.sh"
-  env:
-    PGVERSION: "${{ inputs.postgres-version }}"
-    DB_NAME: "${{ inputs.db-name }}"
-    DB_USER: "${{ inputs.db-user }}"
-    DB_PASS: "${{ inputs.db-password }}"
-    DB_HOST: "${{ inputs.db-host }}"
-    DB_PORT: "${{ inputs.db-port }}"
-    MIGRATIONS: "${{ inputs.migrations }}"
-    CLI_FLAGS: "${{ inputs.cli-flags }}"
-    GITHUB_TOKEN: "${{ inputs.github-token }}"
+  using: "composite"
+  steps:
+    - name: Install Rust toolchain
+      shell: bash
+      run: |
+        if ! command -v cargo >/dev/null; then
+          curl https://sh.rustup.rs -sSf | sh -s -- -y --no-modify-path
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+        fi
+
+    - name: Install pglockanalyze
+      shell: bash
+      run: |
+        cargo install pglockanalyze --locked --force
+
+    - name: Ensure jq & gh are available
+      shell: bash
+      run: |
+        if ! command -v jq >/dev/null; then
+          sudo apt-get update -y
+          sudo apt-get install -y jq
+        fi
+        if ! command -v gh >/dev/null; then
+          sudo apt-get update -y
+          sudo apt-get install -y gh
+        fi
+
+    - name: Run pglockanalyze and post comments
+      shell: bash
+      env:
+        DB_HOST: ${{ inputs.db-host }}
+        DB_PORT: ${{ inputs.db-port }}
+        DB_NAME: ${{ inputs.db-name }}
+        DB_USER: ${{ inputs.db-user }}
+        DB_PASS: ${{ inputs.db-password }}
+        MIGRATIONS: ${{ inputs.migrations }}
+        CLI_FLAGS: ${{ inputs.cli-flags }}
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+      run: |
+        "${{ github.action_path }}/scripts/run.sh"
