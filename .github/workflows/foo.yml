@@ -40,5 +40,5 @@ jobs:
         uses: ./.github/actions/pglockanalyze-action   # <── relative path
         with:
           input_files: |
-            ../../../../foo.sql
-            ../../../../bar.sql
+            foo.sql
+            bar.sql
