@@ -13,26 +13,54 @@ CONN="postgresql://${DB_USER}:${DB_PASS}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
 log "Using connection: $CONN"
 
 RESULT_JSON="$(mktemp)"
-IFS=$'\n'
-readarray -t MIG_LINES <<<"${MIGRATIONS}"
 
+########################################
+# 1. Collect file inputs
+########################################
 FILES=()
+if [[ -n "${FILE_INPUTS:-}" ]]; then
+  while IFS='' read -r line; do
+    [[ -z "$line" ]] && continue
+    full="$GITHUB_WORKSPACE/$line"
+    if [[ -f "$full" ]]; then
+      FILES+=("$full")
+    else
+      log "⚠️  File not found: $line"
+    fi
+  done <<<"$FILE_INPUTS"
+fi
+
+########################################
+# 2. Collect inline DDL statements
+########################################
 INLINE=()
-for item in "${MIG_LINES[@]}"; do
-  if [[ -f "$GITHUB_WORKSPACE/$item" ]]; then
-    FILES+=("$GITHUB_WORKSPACE/$item")
-  elif [[ -n "$item" ]]; then
-    INLINE+=("$item")
-  fi
-done
+if [[ -n "${INLINE_DDL:-}" ]]; then
+  while IFS='' read -r stmt; do
+    [[ -z "$stmt" ]] && continue
+    INLINE+=("$stmt")
+  done <<<"$INLINE_DDL"
+fi
+
+[[ ${#FILES[@]} -eq 0 && ${#INLINE[@]} -eq 0 ]] && {
+  echo "❌ No migrations provided via 'input_files' or 'input_inline'." >&2
+  exit 1
+}
+
+########################################
+# 3. Run pglockanalyze
+########################################
+log "Running pglockanalyze …"
 
 if [[ ${#FILES[@]} -gt 0 ]]; then
-  pglockanalyze --db "$CONN" ${CLI_FLAGS:-} "${FILES[@]}" --format=json >> "$RESULT_JSON"
+  pglockanalyze --db "$CONN" ${CLI_FLAGS:-} "${FILES[@]}" --format=json >>"$RESULT_JSON"
 fi
 
 for ddl in "${INLINE[@]}"; do
-  echo "$ddl" | pglockanalyze --db "$CONN" ${CLI_FLAGS:-} --format=json >> "$RESULT_JSON"
+  echo "$ddl" | pglockanalyze --db "$CONN" ${CLI_FLAGS:-} --format=json >>"$RESULT_JSON"
 done
 
+########################################
+# 4. Post review comments
+########################################
 log "Analysis complete; output at $RESULT_JSON"
-"${GITHUB_ACTION_PATH:-${0%/*}}/scripts/comment-pr.sh" "$RESULT_JSON"
+"${GITHUB_ACTION_PATH:-${0%/*}}/comment-pr.sh" "$RESULT_JSON"

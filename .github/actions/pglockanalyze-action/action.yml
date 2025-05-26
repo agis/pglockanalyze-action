@@ -1,50 +1,69 @@
 name: "pglockanalyze CI Action (composite)"
 description: >
-  Runs pglockanalyze against PostgreSQL schema migrations provided by the
-  caller and posts inline PR comments describing the locks each statement
-  acquires. Requires a PostgreSQL service container to be declared in the
-  workflow.
+  Runs pglockanalyze against PostgreSQL schema migrations supplied
+  either inline (`input_inline`) or as files (`input_files`), then
+  posts inline PR comments describing the locks acquired.
 
 branding:
   icon: "unlock"
   color: "blue"
 
+########################
+#        inputs        #
+########################
 inputs:
   db-host:
     description: "PostgreSQL host"
     required: false
     default: "localhost"
+
   db-port:
     description: "PostgreSQL port"
     required: false
     default: "5432"
+
   db-name:
     description: "Database name"
     required: false
     default: "pgladb"
+
   db-user:
     description: "Database user"
     required: false
     default: "pglauser"
+
   db-password:
     description: "Database password"
     required: false
     default: "pglapass"
-  migrations:
+
+  input_inline:          # ⬅️ renamed
     description: |
-      New‑line separated list containing **either** relative file paths
-      inside the repository **or** raw DDL statements to analyse.
-    required: true
+      **Inline DDL** statements to analyse.
+      Supply multiple statements separated by new-lines.
+    required: false
+
+  input_files:           # ⬅️ renamed
+    description: |
+      New-line separated list of migration **file paths** (within the repo)
+      to analyse.
+    required: false
+
   cli-flags:
     description: "Additional pglockanalyze CLI flags (optional)"
     required: false
+
   github-token:
-    description: "GitHub token with `pull‑requests:write` permission"
+    description: "GitHub token with `pull-requests:write` permission"
     required: false
     default: "${{ github.token }}"
 
+########################
+#        runner        #
+########################
 runs:
   using: "composite"
+
   steps:
     - name: Install Rust toolchain
       shell: bash
@@ -74,13 +93,14 @@ runs:
     - name: Run pglockanalyze and post comments
       shell: bash
       env:
-        DB_HOST: ${{ inputs.db-host }}
-        DB_PORT: ${{ inputs.db-port }}
-        DB_NAME: ${{ inputs.db-name }}
-        DB_USER: ${{ inputs.db-user }}
-        DB_PASS: ${{ inputs.db-password }}
-        MIGRATIONS: ${{ inputs.migrations }}
-        CLI_FLAGS: ${{ inputs.cli-flags }}
-        GITHUB_TOKEN: ${{ inputs.github-token }}
+        DB_HOST:      ${{ inputs["db-host"] }}
+        DB_PORT:      ${{ inputs["db-port"] }}
+        DB_NAME:      ${{ inputs["db-name"] }}
+        DB_USER:      ${{ inputs["db-user"] }}
+        DB_PASS:      ${{ inputs["db-password"] }}
+        INLINE_DDL:   ${{ inputs.input_inline }}   # renamed
+        FILE_INPUTS:  ${{ inputs.input_files }}    # renamed
+        CLI_FLAGS:    ${{ inputs["cli-flags"] }}
+        GITHUB_TOKEN: ${{ inputs["github-token"] }}
       run: |
         "${{ github.action_path }}/scripts/run.sh"
