@@ -20,17 +20,14 @@ jobs:
           POSTGRES_DB: pgladb
         ports:
           - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
       - uses: actions/checkout@v4     # checks out *this* repo
-
-      - name: Wait for PostgreSQL to be ready
-        run: |
-          for i in {1..30}; do
-            pg_isready -h localhost -p 5432 -U pglauser && break
-            echo "Waiting for PostgreSQL to be ready..."
-            sleep 2
-          done
 
       - name: Setup initial schema
         run: |
