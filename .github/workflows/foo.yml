@@ -24,6 +24,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4     # checks out *this* repo
 
+      - name: Wait for PostgreSQL to be ready
+        run: |
+          for i in {1..30}; do
+            pg_isready -h localhost -p 5432 -U pglauser && break
+            echo "Waiting for PostgreSQL to be ready..."
+            sleep 2
+          done
+
       - name: Setup initial schema
         run: |
           PGPASSWORD=pglapass psql -h localhost -p 5432 -U pglauser -d pgladb -c "CREATE TABLE users (name VARCHAR);"
