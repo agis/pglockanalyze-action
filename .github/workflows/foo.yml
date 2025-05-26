@@ -2,7 +2,6 @@ name: lock-check (self-test)
 
 on:
   workflow_dispatch:          # manual trigger
-  pull_request:               # or test automatically
   push:
 
 jobs:
