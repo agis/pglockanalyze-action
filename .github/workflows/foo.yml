@@ -40,6 +40,6 @@ jobs:
         uses: ./.github/actions/pglockanalyze-action   # <── relative path
         with:
           migrations: |
-            migrations/20240525_add_index.sql
             ALTER TABLE users ADD COLUMN last_seen timestamptz;
+            ALTER TABLE users ADD COLUMN foo int;
       - uses: actions/checkout@v4
