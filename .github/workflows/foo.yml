@@ -29,8 +29,6 @@ jobs:
           PGPASSWORD=pglapass psql -h localhost -p 5432 -U pglauser -d pgladb -c "CREATE TABLE users (name VARCHAR);"
 
       - name: pglockanalyze
-
-      - name: pglockanalyze
         uses: ./.github/actions/pglockanalyze-action   # <── relative path
         with:
           migrations: |
