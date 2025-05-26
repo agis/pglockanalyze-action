@@ -1,0 +1,30 @@
+name: lock-check (self-test)
+on:
+  workflow_dispatch:          # manual trigger
+  pull_request:               # or test automatically
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+
+    # --- service container that supplies PostgreSQL ---
+    services:
+      db:
+        image: postgres:16
+        env:
+          POSTGRES_USER: pglauser
+          POSTGRES_PASSWORD: pglapass
+          POSTGRES_DB: pgladb
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: pglockanalyze
+        uses: ./.github/actions/pglockanalyze-action   # <── relative path
+        with:
+          migrations: |
+            ALTER TABLE users ADD COLUMN last_seen timestamptz;

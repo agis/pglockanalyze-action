@@ -1,0 +1,39 @@
+name: lock-check (self-test)
+
+on:
+  workflow_dispatch:          # manual trigger
+  pull_request:               # or test automatically
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+
+    # --- service container that supplies PostgreSQL ---
+    services:
+      db:
+        image: postgres:16
+        env:
+          POSTGRES_USER: pglauser
+          POSTGRES_PASSWORD: pglapass
+          POSTGRES_DB: pgladb
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v4     # checks out *this* repo
+
+      - name: Setup initial schema
+        run: |
+          PGPASSWORD=pglapass psql -h localhost -p 5432 -U pglauser -d pgladb -c "CREATE TABLE users (name VARCHAR);"
+
+      - name: pglockanalyze
+
+      - name: pglockanalyze
+        uses: ./.github/actions/pglockanalyze-action   # <── relative path
+        with:
+          migrations: |
+            migrations/20240525_add_index.sql
+            ALTER TABLE users ADD COLUMN last_seen timestamptz;
+      - uses: actions/checkout@v4
