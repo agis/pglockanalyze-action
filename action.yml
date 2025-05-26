@@ -74,13 +74,14 @@ runs:
     - name: Run pglockanalyze and post comments
       shell: bash
       env:
-        DB_HOST: ${{ inputs.db-host }}
-        DB_PORT: ${{ inputs.db-port }}
-        DB_NAME: ${{ inputs.db-name }}
-        DB_USER: ${{ inputs.db-user }}
-        DB_PASS: ${{ inputs.db-password }}
-        MIGRATIONS: ${{ inputs.migrations }}
-        CLI_FLAGS: ${{ inputs.cli-flags }}
+        DB_HOST:      ${{ inputs.db-host }}
+        DB_PORT:      ${{ inputs.db-port }}
+        DB_NAME:      ${{ inputs.db-name }}
+        DB_USER:      ${{ inputs.db-user }}
+        DB_PASS:      ${{ inputs.db-password }}
+        INLINE_DDL:   ${{ inputs.input_inline }}
+        FILE_INPUTS:  ${{ inputs.input_files }}
+        CLI_FLAGS:    ${{ inputs.cli-flags }}
         GITHUB_TOKEN: ${{ inputs.github-token }}
       run: |
         "${{ github.action_path }}/scripts/run.sh"
