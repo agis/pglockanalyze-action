@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -euxo pipefail
+set -exuo pipefail
 
 log() { echo "[pglockanalyze-action] $*"; }
 
@@ -47,14 +47,16 @@ fi
 }
 
 ########################################
-# 3. Run pglockanalyze
+# 3. Run pglockanalyze (one file / stmt at a time)
 ########################################
 log "Running pglockanalyze …"
 
-if [[ ${#FILES[@]} -gt 0 ]]; then
-  pglockanalyze --db "$CONN" ${CLI_FLAGS:-} "${FILES[@]}" --format=json >>"$RESULT_JSON"
-fi
+# ── 3a. File-based migrations ────────────────────────────
+for file in "${FILES[@]}"; do
+  pglockanalyze --db "$CONN" ${CLI_FLAGS:-} "$file" --format=json >>"$RESULT_JSON"
+done
 
+# ── 3b. Inline statements ────────────────────────────────
 for ddl in "${INLINE[@]}"; do
   echo "$ddl" | pglockanalyze --db "$CONN" ${CLI_FLAGS:-} --format=json >>"$RESULT_JSON"
 done
