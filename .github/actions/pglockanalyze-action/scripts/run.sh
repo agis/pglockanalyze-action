@@ -65,4 +65,4 @@ done
 # 4. Post review comments
 ########################################
 log "Analysis complete; output at $RESULT_JSON"
-"${GITHUB_ACTION_PATH:-${0%/*}}/comment-pr.sh" "$RESULT_JSON"
+"${GITHUB_ACTION_PATH:-${0%/*}}/scripts/comment-pr.sh" "$RESULT_JSON"
