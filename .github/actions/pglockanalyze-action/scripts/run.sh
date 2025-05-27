@@ -23,6 +23,11 @@ while IFS='' read -r relpath; do
     sql=$(echo "$stmt" | jq -r '.sql')
     locks=$(echo "$stmt" | jq -r '[.locks_acquired[] | .mode + " on " + (.lock_target.relation.alias // "?")] | join(", ")')
     escaped="${locks//$'\n'/%0A}"
+    echo $start_line
+    echo $end_line
+    echo $sql
+    echo $locks
+    echo $escaped
     echo "::notice file=$relpath,line=$start_line,endLine=$end_line,title=Locks acquired::$escaped"
   done
 
