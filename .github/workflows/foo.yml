@@ -8,9 +8,8 @@ jobs:
   analyze:
     runs-on: ubuntu-latest
     permissions:
-      pull-requests: write
+      contents: read
 
-    # --- service container that supplies PostgreSQL ---
     services:
       db:
         image: postgres:16
