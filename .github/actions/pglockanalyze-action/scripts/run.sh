@@ -22,7 +22,7 @@ while IFS='' read -r relpath; do
     end_line=$(echo "$stmt" | jq -r '.location.end_line')
     sql=$(echo "$stmt" | jq -r '.sql')
     locks=$(echo "$stmt" | jq -r '[.locks_acquired[] | .mode + " on " + (.lock_target.relation.alias // "?")] | join(", ")')
-    echo "::notice title=Locks acquired,file=${relpath},line=${start_line},endLine=${end_line}::${sql}\nLocks: ${locks}"
+    echo "::notice file=${relpath},line=${start_line},endLine=${end_line},title=Locks acquired::${locks}"
   done
 
 done <<<"$FILE_INPUTS"
