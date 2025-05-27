@@ -1,8 +1,8 @@
 name: "pglockanalyze CI Action (composite)"
 description: >
-  Runs pglockanalyze against PostgreSQL schema migrations supplied
-  either inline (`input_inline`) or as files (`input_files`), then
-  posts inline PR comments describing the locks acquired.
+  Runs pglockanalyze against PostgreSQL migration *files* listed in
+  `input_files`, then posts inline PR annotations describing the locks
+  each statement acquires.
 
 branding:
   icon: "unlock"
@@ -37,26 +37,15 @@ inputs:
     required: false
     default: "pglapass"
 
-  input_inline:          # ⬅️ renamed
-    description: |
-      **Inline DDL** statements to analyse.
-      Supply multiple statements separated by new-lines.
-    required: false
-
-  input_files:           # ⬅️ renamed
+  input_files:           # 👈 ONLY input now
     description: |
       New-line separated list of migration **file paths** (within the repo)
-      to analyse.
-    required: false
+      to analyse. Each file is processed individually.
+    required: true
 
   cli-flags:
     description: "Additional pglockanalyze CLI flags (optional)"
     required: false
-
-  github-token:
-    description: "GitHub token with `pull-requests:write` permission"
-    required: false
-    default: "${{ github.token }}"
 
 ########################
 #        runner        #
@@ -86,17 +75,15 @@ runs:
           sudo apt-get install -y jq
         fi
 
-    - name: Run pglockanalyze and post comments
+    - name: Run pglockanalyze and post annotations
       shell: bash
       env:
-        DB_HOST:      ${{ inputs.db-host }}
-        DB_PORT:      ${{ inputs.db-port }}
-        DB_NAME:      ${{ inputs.db-name }}
-        DB_USER:      ${{ inputs.db-user }}
-        DB_PASS:      ${{ inputs.db-password }}
-        INLINE_DDL:   ${{ inputs.input_inline }}
+        DB_HOST:      ${{ inputs['db-host'] }}
+        DB_PORT:      ${{ inputs['db-port'] }}
+        DB_NAME:      ${{ inputs['db-name'] }}
+        DB_USER:      ${{ inputs['db-user'] }}
+        DB_PASS:      ${{ inputs['db-password'] }}
         FILE_INPUTS:  ${{ inputs.input_files }}
-        CLI_FLAGS:    ${{ inputs.cli-flags }}
-        GITHUB_TOKEN: ${{ inputs.github-token }}
+        CLI_FLAGS:    ${{ inputs['cli-flags'] }}
       run: |
         "${{ github.action_path }}/scripts/run.sh"
