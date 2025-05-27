@@ -78,16 +78,12 @@ runs:
       run: |
         cargo install pglockanalyze --locked --force
 
-    - name: Ensure jq & gh are available
+    - name: Ensure jq is available
       shell: bash
       run: |
         if ! command -v jq >/dev/null; then
           sudo apt-get update -y
           sudo apt-get install -y jq
-        fi
-        if ! command -v gh >/dev/null; then
-          sudo apt-get update -y
-          sudo apt-get install -y gh
         fi
 
     - name: Run pglockanalyze and post comments

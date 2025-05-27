@@ -3,36 +3,17 @@ set -euo pipefail
 
 JSON_FILE="$1"
 
-if [[ -z "${GITHUB_TOKEN:-}" ]]; then
-  echo "GITHUB_TOKEN not provided; cannot post review comments." >&2
-  exit 1
-fi
-
-export GH_TOKEN="$GITHUB_TOKEN"
-
-PR_NUMBER="${PR_NUMBER:-}"
-REPO_SLUG="${GITHUB_REPOSITORY:-}"
-
-if [[ -z "$PR_NUMBER" ]]; then
-  PR_NUMBER=$(jq -r '.pull_request.number // empty' < "$GITHUB_EVENT_PATH")
-fi
-if [[ -z "$PR_NUMBER" ]]; then
-  echo "Cannot determine PR number" >&2
-  exit 1
-fi
-
+# Iterate over every statement in the combined pglockanalyze output
 jq -c '.statements[]' "$JSON_FILE" | while read -r stmt; do
   file=$(echo "$stmt" | jq -r '.location.path // empty')
-  start=$(echo "$stmt" | jq -r '.location.start.line // empty')
+  line=$(echo "$stmt" | jq -r '.location.start.line // empty')
   body=$(echo "$stmt" | jq -r '.message')
 
-  if [[ -z "$file" || -z "$start" ]]; then
-    gh pr comment "$PR_NUMBER" --repo "$REPO_SLUG" --body "${body//$'\n'/ }"
+  # Fallback: no file/line info → plain notice
+  if [[ -z "$file" || -z "$line" ]]; then
+    echo "::notice ::$body"
   else
-    gh pr comment "$PR_NUMBER" \
-      --repo "$REPO_SLUG" \
-      --body "${body//$'\n'/ }" \
-      --path "$file" \
-      --line "$start"
+    # Emit an annotation tied to a specific line in the PR diff
+    echo "::notice file=${file},line=${line}::$body"
   fi
 done
