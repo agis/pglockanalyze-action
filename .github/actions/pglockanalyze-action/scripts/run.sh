@@ -26,7 +26,7 @@ while IFS='' read -r relpath; do
                ] | join("%0A")'
     )
 
-    echo "::warning file=${relpath},line=${start_line},endLine=${end_line}::${locks}"
+    echo "::warning file=${relpath},line=${start_line},col=1,endColumn=5,endLine=${end_line}::${locks}"
   done
 
 done <<<"$FILE_INPUTS"
