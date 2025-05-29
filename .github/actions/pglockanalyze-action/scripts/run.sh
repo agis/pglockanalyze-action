@@ -20,14 +20,13 @@ while IFS='' read -r relpath; do
       echo "$stmt" |
         jq -r '[.locks_acquired[] |
                   (if .lock_target.relation?
-                     then "Acquired " + .mode + " on relation `" + .lock_target.relation.alias + "`"
-                     else "Acquired " + .mode + " on object `"  + .lock_target.object.alias   + "`"
+                     then "Acquired " + .mode + " lock on relation `" + .lock_target.relation.alias + "`"
+                     else "Acquired " + .mode + " lock on object `"  + .lock_target.object.alias   + "`"
                    end)
-                 + " ([docs](https://www.postgresql.org/docs/current/explicit-locking.html))"
                ] | join("%0A")'
     )
 
-    echo "::notice title=Locks acquired,file=${relpath},line=${start_line},endLine=${end_line}::${locks}"
+    echo "::warning file=${relpath},line=${start_line},endLine=${end_line}::${locks}"
   done
 
 done <<<"$FILE_INPUTS"
