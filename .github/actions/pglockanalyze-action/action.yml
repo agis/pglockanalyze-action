@@ -65,7 +65,7 @@ runs:
     - name: Install pglockanalyze
       shell: bash
       run: |
-        cargo install pglockanalyze --locked --force
+        cargo install pglockanalyze --git https://github.com/agis/pglockanalyze --branch main --locked --force
 
     - name: Ensure jq is available
       shell: bash
