@@ -1,16 +1,12 @@
-name: "pglockanalyze CI Action (composite)"
+name: "pglockanalyze"
 description: >
-  Runs pglockanalyze against PostgreSQL migration *files* listed in
-  `input_files`, then posts inline PR annotations describing the locks
-  each statement acquires.
+  Runs pglockanalyze against the provided migration files listed in
+  `input_files` and posts the results in PR annotations.
 
 branding:
-  icon: "unlock"
+  icon: "database"
   color: "blue"
 
-########################
-#        inputs        #
-########################
 inputs:
   db-host:
     description: "PostgreSQL host"
@@ -37,19 +33,21 @@ inputs:
     required: false
     default: "pglapass"
 
-  input_files:           # 👈 ONLY input now
+  input_files:
     description: |
-      New-line separated list of migration **file paths** (within the repo)
-      to analyse. Each file is processed individually.
+      New-line separated list of migration **file paths** to analyse. Each file
+      is processed individually.
     required: true
+
+  pglockanalyze-version:
+    description: "Version of pglockanalyze to use (default: latest)"
+    required: false
 
   cli-flags:
     description: "Additional pglockanalyze CLI flags (optional)"
     required: false
 
-########################
-#        runner        #
-########################
+
 runs:
   using: "composite"
 
@@ -64,8 +62,14 @@ runs:
 
     - name: Install pglockanalyze
       shell: bash
+      env:
+        PGLA_VERSION: ${{ inputs.pgla-version }}
       run: |
-        cargo install pglockanalyze --git https://github.com/agis/pglockanalyze --branch main --locked --force
+        if [[ -n "$PGLA_VER" ]]; then
+          cargo install pglockanalyze --locked --force --version "$PGLA_VERSION"
+        else
+          cargo install pglockanalyze --locked --force
+        fi
 
     - name: Ensure jq is available
       shell: bash
@@ -83,7 +87,7 @@ runs:
         DB_NAME:      ${{ inputs['db-name'] }}
         DB_USER:      ${{ inputs['db-user'] }}
         DB_PASS:      ${{ inputs['db-password'] }}
-        FILE_INPUTS:  ${{ inputs.input_files }}
+        INPUT_FILES:  ${{ inputs.input_files }}
         CLI_FLAGS:    ${{ inputs['cli-flags'] }}
       run: |
         "${{ github.action_path }}/scripts/run.sh"

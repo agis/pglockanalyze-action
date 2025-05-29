@@ -1,6 +1,1 @@
-
--- there
--- there sup
-ALTER TABLE users
-  ADD COLUMN braijfoea
-  int;
+ALTER TABLE users ADD COLUMN name int;
