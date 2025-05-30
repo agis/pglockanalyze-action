@@ -36,5 +36,4 @@ jobs:
         uses: agis/pglockanalyze-action@v0.0.3
         with:
           input_files: |
-            foo.sql
-            bar.sql
+            add_name_to_users.sql
