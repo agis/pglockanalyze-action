@@ -30,7 +30,7 @@ jobs:
 
       - name: Setup initial schema
         run: |
-          PGPASSWORD=pglapass psql -h localhost -p 5432 -U pglauser -d pgladb -c "CREATE TABLE users (name VARCHAR);"
+          PGPASSWORD=pglapass psql -h localhost -p 5432 -U pglauser -d pgladb -c "CREATE TABLE users (zxc VARCHAR);"
 
       - name: pglockanalyze
         uses: agis/pglockanalyze-action@v0.0.3
