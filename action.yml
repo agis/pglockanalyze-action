@@ -90,4 +90,4 @@ runs:
         INPUT_FILES:  ${{ inputs.input_files }}
         CLI_FLAGS:    ${{ inputs['cli-flags'] }}
       run: |
-        "${{ github.action_path }}/scripts/run.sh"
+        "${{ github.action_path }}/run.sh"
