@@ -33,7 +33,7 @@ jobs:
           PGPASSWORD=pglapass psql -h localhost -p 5432 -U pglauser -d pgladb -c "CREATE TABLE users (name VARCHAR);"
 
       - name: pglockanalyze
-        uses: agis/pglockanalyze-action@v0.0.2
+        uses: agis/pglockanalyze-action@v0.0.3
         with:
           input_files: |
             foo.sql
