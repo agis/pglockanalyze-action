@@ -32,4 +32,4 @@ while IFS='' read -r relpath; do
 
     echo "::notice file=${relpath},line=${start_line},endLine=${end_line}::${locks}"
   done
-done <<< "$FILE_INPUTS"
+done <<< "$INPUT_FILES"
