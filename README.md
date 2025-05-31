@@ -1,15 +1,13 @@
 # pglockanalyze-action
 
-**Status:** This is in **alpha** stage yet, so expect things to break often and
-a lot of rough edges.*
+![image](https://github.com/user-attachments/assets/3539ef87-8bce-436c-a826-fbdc4a7da526)
 
-------
+Runs [pglockanalyze](https://crates.io/crates/pglockanalyze) against a PR with one
+or more migration files and reports the results in the diff.
 
-Runs [`pglockanalyze`](https://crates.io/crates/pglockanalyze) against with one
-or more migration files (i.e. files containing DDL statements) to analyze,
-and reports the results inline in the diff.
+## Usage
 
-You bring your own `postgres:` service container (any version), specify the
+You have to bring your own `postgres:` service container (any version), specify the
 connection parameters and the action executes pglockanalyze against it, using
 the files you provided.
 
@@ -17,7 +15,9 @@ Also, you have to make sure to provision the database so that it's in a proper
 state for the analysis to be possible (e.g. if you have pre-existing migrations
 that should not be analyzed, you are responsible for running them).
 
----
+## Status
+
+This software is in *alpha* stage - *expect breakage* and rough edges.
 
 ## Inputs
 
