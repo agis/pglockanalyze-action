@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-CONN="postgresql://${DB_USER}:${DB_PASS}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
-
 [[ -z "${INPUT_FILES:-}" ]] && { echo "input_files is empty" >&2; exit 1; }
+
+db_conn="postgresql://${DB_USER}:${DB_PASS}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
 
 while IFS='' read -r relpath; do
   [[ -z "$relpath" ]] && continue
   expanded_path="$GITHUB_WORKSPACE/$relpath"
   [[ ! -f "$expanded_path" ]] && { echo "File not found: $relpath" >&2; continue; }
 
-  result_json="$(pglockanalyze --db "$CONN" ${CLI_FLAGS:-} "$expanded_path" --format=json)"
+  result_json="$(pglockanalyze --db "$db_conn" --format=json ${CLI_FLAGS:-} "$expanded_path")"
 
   echo "$result_json" | jq -c '.[]' | while read -r stmt; do
     start_line=$(echo "$stmt" | jq -r '.location.start_line')
@@ -22,9 +22,9 @@ while IFS='' read -r relpath; do
       else
         [ .locks_acquired[]
           | if .lock_target.relation? then
-              "Acquired " + .mode + " on relation `" + .lock_target.relation.alias + "`"
+              "Acquired `" + .mode + "` lock on relation `" + .lock_target.relation.alias + "`"
             else
-              "Acquired " + .mode + " on object `" + .lock_target.object.alias + "`"
+              "Acquired `" + .mode + "` lock on object `" + .lock_target.object.alias + "`"
             end
         ] | join("%0A")
       end
