@@ -15,6 +15,8 @@ Also, you have to make sure to provision the database so that it's in a proper
 state for the analysis to be possible (e.g. if you have pre-existing migrations
 that should not be analyzed, you are responsible for running them).
 
+See https://github.com/agis/pglockanalyze-action/pull/5 for a sample PR demonstrating how one might use this action.
+
 ## Status
 
 This software is in *alpha* stage - *expect breakage* and rough edges.
