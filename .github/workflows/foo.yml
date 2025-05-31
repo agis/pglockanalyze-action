@@ -30,6 +30,8 @@ jobs:
 
       - name: Setup initial schema
         run: |
+          sudo apt-get update -y
+          sudo apt-get install -y postgresql-client build-essential clang libclang1 libc6-dev
           PGPASSWORD=pglapass psql -h localhost -p 5432 -U pglauser -d pgladb -c "CREATE TABLE users (zxc VARCHAR);"
 
       - name: pglockanalyze
