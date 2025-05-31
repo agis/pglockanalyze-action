@@ -4,7 +4,7 @@
   <img src="https://github.com/user-attachments/assets/3539ef87-8bce-436c-a826-fbdc4a7da526" />
 </p>
 
-Runs [pglockanalyze](https://crates.io/crates/pglockanalyze) against a PR with one
+Runs [pglockanalyze](https://github.com/agis/pglockanalyze) against a PR with one
 or more migration files and reports the results in the diff.
 
 ## Usage
