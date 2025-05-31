@@ -1,0 +1,50 @@
+name: analyze-database-migration-locks
+
+on:
+  pull_request:
+
+jobs:
+  analyze-database-locks:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    services:
+      db:
+        image: postgres:16
+        env:
+          POSTGRES_USER: pglauser
+          POSTGRES_PASSWORD: pglapass
+          POSTGRES_DB: pgladb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # necessary when specifying `migrations_path`
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.25'
+
+      - name: Install sql-migrate
+        run: |
+          go install github.com/rubenv/sql-migrate/...@latest
+
+      - name: Analyze database migration locks
+        uses: agis/pglockanalyze-action@v0.0.12
+        with:
+          db-host: localhost
+          db-port: 5432
+          db-name: pgladb
+          db-user: pglauser
+          db-password: pglapass
+          migrations_path: ./migrations
+          migration_command: sql-migrate up
