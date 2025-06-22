@@ -1,7 +1,49 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-[[ -z "${INPUT_FILES:-}" ]] && { echo "input_files is empty" >&2; exit 1; }
+cd "$GITHUB_WORKSPACE"
+
+if [[ -z "${INPUT_FILES:-}" && -z "${MIGRATIONS_PATH:-}" ]]; then
+  echo "Either input_files or migrations_path must be provided" >&2
+  exit 1
+fi
+
+if [[ -n "${MIGRATIONS_PATH:-}" ]]; then
+  mapfile -t NEW_FILES < <(git diff --name-only --diff-filter=A HEAD^ -- "$MIGRATIONS_PATH" || true)
+  mapfile -t ALL_FILES < <(ls -1 "$MIGRATIONS_PATH" 2>/dev/null || true)
+  mapfile -t OLD_FILES < <(comm -23 <(printf '%s\n' "${ALL_FILES[@]}" | sort) <(printf '%s\n' "${NEW_FILES[@]}" | sort))
+
+  if [[ -n "${MIGRATION_COMMAND:-}" || -n "${MIGRATION_COMMAND_ONCE:-}" ]]; then
+    tmpdir="$(mktemp -d)"
+    for f in "${NEW_FILES[@]}"; do
+      [ -f "$f" ] || continue
+      mkdir -p "$tmpdir/$(dirname "$f")"
+      mv "$f" "$tmpdir/$f"
+    done
+
+    if [[ -n "${MIGRATION_COMMAND_ONCE:-}" ]]; then
+      read -r -a CMD_ARR <<< "$MIGRATION_COMMAND_ONCE"
+      "${CMD_ARR[@]}"
+    elif [[ -n "${MIGRATION_COMMAND:-}" ]]; then
+      read -r -a CMD_ARR <<< "$MIGRATION_COMMAND"
+      for f in "${OLD_FILES[@]}"; do
+        [ -f "$f" ] || continue
+        "${CMD_ARR[@]}" "$f"
+      done
+    fi
+
+    for f in "${NEW_FILES[@]}"; do
+      mkdir -p "$(dirname "$f")"
+      mv "$tmpdir/$f" "$f"
+    done
+  fi
+
+  if [[ -z "${INPUT_FILES:-}" ]]; then
+    INPUT_FILES="$(printf '%s\n' "${NEW_FILES[@]}")"
+  fi
+fi
+
+[[ -z "${INPUT_FILES:-}" ]] && { echo "No migration files to analyse" >&2; exit 1; }
 
 db_conn="postgresql://${DB_USER}:${DB_PASS}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
 
@@ -10,7 +52,7 @@ while IFS='' read -r relpath; do
   expanded_path="$GITHUB_WORKSPACE/$relpath"
   [[ ! -f "$expanded_path" ]] && { echo "File not found: $relpath" >&2; continue; }
 
-  result_json="$(pglockanalyze --db "$db_conn" --format=json ${CLI_FLAGS:-} "$expanded_path")"
+  result_json="$(pglockanalyze --db "$db_conn" --format=json --commit "${CLI_FLAGS:-}" "$expanded_path")"
 
   echo "$result_json" | jq -c '.[]' | while read -r stmt; do
     start_line=$(echo "$stmt" | jq -r '.location.start_line')

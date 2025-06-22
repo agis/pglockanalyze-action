@@ -36,8 +36,25 @@ inputs:
   input_files:
     description: |
       New-line separated list of migration **file paths** to analyse. Each file
-      is processed individually.
-    required: true
+      is processed individually. Ignored if `migrations_path` is provided.
+    required: false
+
+  migrations_path:
+    description: "Directory or glob pattern pointing to migration files"
+    required: false
+
+  migration_command:
+    description: >
+      Command executed once for each pre-existing migration file. The file path
+      is appended as the last argument when invoking the command.
+    required: false
+
+  migration_command_once:
+    description: >
+      Command executed a single time to apply all pre-existing migrations. The
+      command is invoked without extra file arguments and is useful for tools
+      that operate on migration directories.
+    required: false
 
   pglockanalyze-version:
     description: "Version of pglockanalyze to use (default: latest)"
@@ -65,7 +82,7 @@ runs:
       env:
         PGLA_VERSION: ${{ inputs.pgla-version }}
       run: |
-        if [[ -n "$PGLA_VER" ]]; then
+        if [[ -n "$PGLA_VERSION" ]]; then
           cargo install pglockanalyze --locked --force --version "$PGLA_VERSION"
         else
           cargo install pglockanalyze --locked --force
@@ -89,5 +106,8 @@ runs:
         DB_PASS:      ${{ inputs['db-password'] }}
         INPUT_FILES:  ${{ inputs.input_files }}
         CLI_FLAGS:    ${{ inputs['cli-flags'] }}
+        MIGRATIONS_PATH: ${{ inputs.migrations_path }}
+        MIGRATION_COMMAND: ${{ inputs.migration_command }}
+        MIGRATION_COMMAND_ONCE: ${{ inputs.migration_command_once }}
       run: |
         "${{ github.action_path }}/run.sh"

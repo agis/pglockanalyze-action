@@ -10,12 +10,15 @@ or more migration files and reports the results in the diff.
 ## Usage
 
 You have to bring your own `postgres:` service container (any version), specify the
-connection parameters and the action executes pglockanalyze against it, using
-the files you provided.
+connection parameters and the action executes pglockanalyze against it using
+the files you provide.
 
-Also, you have to make sure to provision the database so that it's in a proper
-state for the analysis to be possible (e.g. if you have pre-existing migrations
-that should not be analyzed, you are responsible for running them).
+If your repository contains older migrations, set `migrations_path` together
+with either `migration_command` or `migration_command_once`. The action will
+automatically run the pre-existing migrations before analysing the new ones.
+`migration_command` runs **once per migration file**, appending the file path to
+the command. `migration_command_once` runs **only once** without any extra
+arguments, which is handy for tools that operate on a directory of migrations.
 
 See https://github.com/agis/pglockanalyze-action/pull/5 for a sample PR demonstrating how one might use this action.
 
@@ -27,7 +30,7 @@ This software is in *alpha* stage - *expect breakage* and rough edges.
 
 | Name | Required | Default | Description |
 |------|----------|---------|-------------|
-| `input_files` | **yes** | — | Newline-separated list of migration files to analyse, relative to the repo root. |
+| `input_files` | no | — | Newline-separated list of migration files to analyse, relative to the repo root. Ignored if `migrations_path` is set. |
 | `pgla-version` | no | latest | Version of pglockanalyze to use |
 | `cli-flags` | no | — | Extra flags to pass to pglockanalyze |
 | `db-host` | no | `localhost` | Host used in the connection string |
@@ -35,6 +38,11 @@ This software is in *alpha* stage - *expect breakage* and rough edges.
 | `db-name` | no | `pgladb` | Database to create/use for analysis |
 | `db-user` | no | `pglauser` | Role created for the run |
 | `db-password` | no | `pglapass` | Password for `db-user` |
+| `migrations_path` | no | — | Directory or glob pattern pointing to migration files |
+| `migration_command` | no | — | Command executed once per existing migration file. The file path is passed as the last argument. |
+| `migration_command_once` | no | — | Command executed once for all existing migrations without any extra file arguments. |
+
+At least one of `input_files` or `migrations_path` must be provided. If both are set, `migrations_path` is used only to apply the existing migrations when `migration_command` or `migration_command_once` is specified.
 
 ---
 
@@ -61,11 +69,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # ...run pre-existing migrations here...
-
       - uses: agis/pglockanalyze-action@v1
         with:
-          # List of migration files to analyze
-          input_files: |
-            migrations/20240525_add_name_to_users.sql
-            migrations/20240525_drop_cars.sql
+          migrations_path: "migrations/*.sql"
+          migration_command_once: "sql-migrate up"
+```
