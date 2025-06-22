@@ -63,6 +63,7 @@ inputs:
   cli-flags:
     description: "Additional pglockanalyze CLI flags (optional)"
     required: false
+    default: "--commit"
 
 
 runs:

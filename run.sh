@@ -46,13 +46,14 @@ fi
 [[ -z "${INPUT_FILES:-}" ]] && { echo "No migration files to analyse" >&2; exit 1; }
 
 db_conn="postgresql://${DB_USER}:${DB_PASS}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
+read -r -a CLI_ARR <<< "${CLI_FLAGS:-}"
 
 while IFS='' read -r relpath; do
   [[ -z "$relpath" ]] && continue
   expanded_path="$GITHUB_WORKSPACE/$relpath"
   [[ ! -f "$expanded_path" ]] && { echo "File not found: $relpath" >&2; continue; }
 
-  result_json="$(pglockanalyze --db "$db_conn" --format=json --commit "${CLI_FLAGS:-}" "$expanded_path")"
+  result_json="$(pglockanalyze --db "$db_conn" --format=json "${CLI_ARR[@]}" "$expanded_path")"
 
   echo "$result_json" | jq -c '.[]' | while read -r stmt; do
     start_line=$(echo "$stmt" | jq -r '.location.start_line')

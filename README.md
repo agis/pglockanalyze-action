@@ -32,7 +32,7 @@ This software is in *alpha* stage - *expect breakage* and rough edges.
 |------|----------|---------|-------------|
 | `input_files` | no | — | Newline-separated list of migration files to analyse, relative to the repo root. Ignored if `migrations_path` is set. |
 | `pgla-version` | no | latest | Version of pglockanalyze to use |
-| `cli-flags` | no | — | Extra flags to pass to pglockanalyze |
+| `cli-flags` | no | `--commit` | Extra flags to pass to pglockanalyze |
 | `db-host` | no | `localhost` | Host used in the connection string |
 | `db-port` | no | `5432` | Port number. |
 | `db-name` | no | `pgladb` | Database to create/use for analysis |
@@ -41,6 +41,8 @@ This software is in *alpha* stage - *expect breakage* and rough edges.
 | `migrations_path` | no | — | Directory or glob pattern pointing to migration files |
 | `migration_command` | no | — | Command executed once per existing migration file. The file path is passed as the last argument. |
 | `migration_command_once` | no | — | Command executed once for all existing migrations without any extra file arguments. |
+
+The `cli-flags` input defaults to `--commit` so that each migration is applied inside its own transaction.
 
 At least one of `input_files` or `migrations_path` must be provided. If both are set, `migrations_path` is used only to apply the existing migrations when `migration_command` or `migration_command_once` is specified.
 
