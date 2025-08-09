@@ -76,9 +76,9 @@ runs:
     - name: Install pglockanalyze
       shell: bash
       env:
-        PGLA_VERSION: ${{ inputs.pgla-version }}
+        PGLA_VERSION: ${{ inputs.pglockanalyze-version }}
       run: |
-        if [[ -n "$PGLA_VER" ]]; then
+        if [[ -n "$PGLA_VERSION" ]]; then
           cargo install pglockanalyze --locked --force --version "$PGLA_VERSION"
         else
           cargo install pglockanalyze --locked --force
