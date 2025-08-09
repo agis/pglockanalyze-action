@@ -36,8 +36,21 @@ inputs:
   input_files:
     description: |
       New-line separated list of migration **file paths** to analyse. Each file
-      is processed individually.
-    required: true
+      is processed individually. Optional if migration-path is provided.
+    required: false
+
+  migration-command:
+    description: |
+      Command to run existing migrations before analysis. Used when migration-path 
+      is provided to automatically detect new migration files.
+    required: false
+
+  migration-path:
+    description: |
+      Path or glob pattern where migration files reside. When provided, the action
+      will automatically detect new migration files and run migration-command on
+      existing ones before analysis.
+    required: false
 
   pglockanalyze-version:
     description: "Version of pglockanalyze to use (default: latest)"
@@ -82,12 +95,14 @@ runs:
     - name: Run pglockanalyze and post annotations
       shell: bash
       env:
-        DB_HOST:      ${{ inputs['db-host'] }}
-        DB_PORT:      ${{ inputs['db-port'] }}
-        DB_NAME:      ${{ inputs['db-name'] }}
-        DB_USER:      ${{ inputs['db-user'] }}
-        DB_PASS:      ${{ inputs['db-password'] }}
-        INPUT_FILES:  ${{ inputs.input_files }}
-        CLI_FLAGS:    ${{ inputs['cli-flags'] }}
+        DB_HOST:          ${{ inputs['db-host'] }}
+        DB_PORT:          ${{ inputs['db-port'] }}
+        DB_NAME:          ${{ inputs['db-name'] }}
+        DB_USER:          ${{ inputs['db-user'] }}
+        DB_PASS:          ${{ inputs['db-password'] }}
+        INPUT_FILES:      ${{ inputs.input_files }}
+        MIGRATION_CMD:    ${{ inputs['migration-command'] }}
+        MIGRATION_PATH:   ${{ inputs['migration-path'] }}
+        CLI_FLAGS:        ${{ inputs['cli-flags'] }}
       run: |
         "${{ github.action_path }}/run.sh"
