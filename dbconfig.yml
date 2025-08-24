@@ -1,0 +1,5 @@
+development:
+  dialect: postgres
+  datasource: postgres://pglauser:pglapass@localhost:5432/pgladb?sslmode=disable
+  dir: migrations
+  table: schema_migrations
