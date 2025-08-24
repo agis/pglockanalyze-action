@@ -13,8 +13,8 @@ You have to bring your own `postgres:` service container (any version), specify 
 connection parameters and the action executes pglockanalyze against it using
 the files you provide.
 
-If your repository contains older migrations, set `migrations_path` together with
-`migration_command`. The action will automatically run the pre-existing migrations
+If your repository contains older migrations, set `migrations_path` to the
+directory containing them together with `migration_command`. The action will automatically run the pre-existing migrations
 before analysing the new ones. New files are detected by comparing the pull request's
 base and head commits. `migration_command` runs once with `migrations_path` as its
 only argument, so it must accept a directory path. The action temporarily moves the
@@ -40,7 +40,7 @@ This software is in *alpha* stage - *expect breakage* and rough edges.
 | `db-name` | no | `pgladb` | Database to create/use for analysis |
 | `db-user` | no | `pglauser` | Role created for the run |
 | `db-password` | no | `pglapass` | Password for `db-user` |
-| `migrations_path` | no | — | Directory or glob pattern pointing to migration files. Requires `migration_command` and cannot be combined with `input_files`. |
+| `migrations_path` | no | — | Directory containing migration files. Must exist. Requires `migration_command` and cannot be combined with `input_files`. |
 | `migration_command` | no | — | Command used to apply existing migrations. Runs once with `migrations_path` as its only argument. |
 
 The `cli-flags` input defaults to `--commit` so that each migration is applied inside its own transaction.

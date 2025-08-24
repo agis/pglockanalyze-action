@@ -30,6 +30,12 @@ if [[ -z "${INPUT_FILES:-}" && -z "${MIGRATIONS_PATH:-}" ]]; then
 fi
 
 if [[ -n "${MIGRATIONS_PATH:-}" ]]; then
+  # Ensure migrations_path points to an existing directory
+  if [[ ! -d "$MIGRATIONS_PATH" ]]; then
+    echo "migrations_path must be an existing directory" >&2
+    exit 1
+  fi
+
   # Determine which migrations are new in this pull request
   base_sha="$BASE_SHA"
   head_sha="$HEAD_SHA"
@@ -48,19 +54,9 @@ if [[ -n "${MIGRATIONS_PATH:-}" ]]; then
     mv "$f" "$tmpdir/$(basename "$f")"
   done
 
-  # Resolve the directory to pass to the migration command
-  migration_dir="$MIGRATIONS_PATH"
-  if [[ ! -d "$migration_dir" ]]; then
-    migration_dir="$(dirname "$MIGRATIONS_PATH")"
-  fi
-  if [[ ! -d "$migration_dir" ]]; then
-    echo "migrations_path must resolve to an existing directory" >&2
-    exit 1
-  fi
-
   # Run the user-supplied command once, passing the directory
   read -r -a CMD_ARR <<< "$MIGRATION_COMMAND"
-  "${CMD_ARR[@]}" "$migration_dir"
+  "${CMD_ARR[@]}" "$MIGRATIONS_PATH"
 
   # Restore the new migrations to their original locations
   for f in "${NEW_MIGRATIONS[@]}"; do
