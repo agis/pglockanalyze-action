@@ -36,8 +36,18 @@ inputs:
   input_files:
     description: |
       New-line separated list of migration **file paths** to analyse. Each file
-      is processed individually.
-    required: true
+      is processed individually. Cannot be used together with `migrations_path`.
+    required: false
+
+    migrations_path:
+      description: "Directory containing migration files. Must exist. Requires `migration_command` and cannot be combined with `input_files`"
+      required: false
+
+  migration_command:
+    description: |
+      Command used to apply existing migrations. Runs once with `migrations_path`
+      as its only argument. Required when `migrations_path` is set.
+    required: false
 
   pglockanalyze-version:
     description: "Version of pglockanalyze to use (default: latest)"
@@ -46,7 +56,7 @@ inputs:
   cli-flags:
     description: "Additional pglockanalyze CLI flags (optional)"
     required: false
-
+    default: "--commit"
 
 runs:
   using: "composite"
@@ -65,7 +75,7 @@ runs:
       env:
         PGLA_VERSION: ${{ inputs.pgla-version }}
       run: |
-        if [[ -n "$PGLA_VER" ]]; then
+        if [[ -n "$PGLA_VERSION" ]]; then
           cargo install pglockanalyze --locked --force --version "$PGLA_VERSION"
         else
           cargo install pglockanalyze --locked --force
@@ -89,5 +99,9 @@ runs:
         DB_PASS:      ${{ inputs['db-password'] }}
         INPUT_FILES:  ${{ inputs.input_files }}
         CLI_FLAGS:    ${{ inputs['cli-flags'] }}
+        MIGRATIONS_PATH: ${{ inputs.migrations_path }}
+        MIGRATION_COMMAND: ${{ inputs.migration_command }}
+        BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        HEAD_SHA: ${{ github.event.pull_request.head.sha }}
       run: |
         "${{ github.action_path }}/run.sh"
