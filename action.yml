@@ -103,7 +103,7 @@ runs:
         CLI_FLAGS:         ${{ inputs['cli-flags'] }}
         MIGRATIONS_PATH:   ${{ inputs.migrations_path }}
         MIGRATION_COMMAND: ${{ inputs.migration_command }}
-        BASE_SHA:          ${{ github.event.base_ref }}
+        BASE_SHA:          ${{ github.event.base_ref || github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
         HEAD_SHA:          ${{ github.sha }}
       run: |
         "${{ github.action_path }}/run.sh"
