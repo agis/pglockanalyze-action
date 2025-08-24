@@ -16,9 +16,11 @@ the files you provide.
 If your repository contains older migrations, set `migrations_path` together
 with either `migration_command` or `migration_command_once`. The action will
 automatically run the pre-existing migrations before analysing the new ones.
-`migration_command` runs **once per migration file**, appending the file path to
-the command. `migration_command_once` runs **only once** without any extra
-arguments, which is handy for tools that operate on a directory of migrations.
+New files are detected by comparing the pull request's base and head commits
+(or merge group SHAs when using merge queues). `migration_command` runs **once
+per migration file**, appending the file path to the command. `migration_command_once`
+runs **only once** without any extra arguments, which is handy for tools that
+operate on a directory of migrations.
 
 See https://github.com/agis/pglockanalyze-action/pull/5 for a sample PR demonstrating how one might use this action.
 

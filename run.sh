@@ -9,9 +9,19 @@ if [[ -z "${INPUT_FILES:-}" && -z "${MIGRATIONS_PATH:-}" ]]; then
 fi
 
 if [[ -n "${MIGRATIONS_PATH:-}" ]]; then
-  base_ref=${GITHUB_BASE_REF:-main}
-  git fetch --depth=1 origin "$base_ref" >/dev/null 2>&1 || true
-  mapfile -t NEW_FILES < <(git diff --name-only --diff-filter=A "origin/$base_ref"...HEAD -- "$MIGRATIONS_PATH" || true)
+  base_range=""
+  base_sha=${BASE_SHA:-}
+  head_sha=${HEAD_SHA:-HEAD}
+  if [[ -n "$base_sha" ]]; then
+    git fetch --depth=1 origin "$base_sha" >/dev/null 2>&1 || true
+    base_range="$base_sha"
+  else
+    base_ref=${GITHUB_BASE_REF:-main}
+    git fetch --depth=1 origin "$base_ref" >/dev/null 2>&1 || true
+    base_range="origin/$base_ref"
+  fi
+
+  mapfile -t NEW_FILES < <(git diff --name-only --diff-filter=A "$base_range...$head_sha" -- "$MIGRATIONS_PATH" || true)
   mapfile -t ALL_FILES < <(ls -1 "$MIGRATIONS_PATH" 2>/dev/null || true)
   mapfile -t OLD_FILES < <(comm -23 <(printf '%s\n' "${ALL_FILES[@]}" | sort) <(printf '%s\n' "${NEW_FILES[@]}" | sort))
 

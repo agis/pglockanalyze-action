@@ -110,5 +110,7 @@ runs:
         MIGRATIONS_PATH: ${{ inputs.migrations_path }}
         MIGRATION_COMMAND: ${{ inputs.migration_command }}
         MIGRATION_COMMAND_ONCE: ${{ inputs.migration_command_once }}
+        BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+        HEAD_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha }}
       run: |
         "${{ github.action_path }}/run.sh"
