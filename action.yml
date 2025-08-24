@@ -39,9 +39,11 @@ inputs:
       is processed individually. Cannot be used together with `migrations_path`.
     required: false
 
-    migrations_path:
-      description: "Directory containing migration files. Must exist. Requires `migration_command` and cannot be combined with `input_files`"
-      required: false
+  migrations_path:
+    description: |
+      Directory containing the migration files. Requires `migration_command` and
+      cannot be combined with `input_files`"
+    required: false
 
   migration_command:
     description: |
