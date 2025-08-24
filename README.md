@@ -9,20 +9,24 @@ or more migration files and reports the results in the diff.
 
 ## Usage
 
-You have to bring your own `postgres:` service container (any version), specify the
+You have to bring your own `postgres:` service container, specify the
 connection parameters and the action executes pglockanalyze against it using
-the files you provide.
-
-If your repository contains older migrations, set `migrations_path` to the
-directory containing them together with `migration_command`. The action will automatically run the pre-existing migrations
-before analysing the new ones. New files are detected by comparing the pull request's
-base and head commits. `migration_command` runs once with `migrations_path` as its
-only argument, so it must accept a directory path. The action temporarily moves the
-new migrations away, executes the command to apply the existing ones, restores the
-new files, and finally analyses them. When no new migrations are found the action
-prints a diagnostic message and exits successfully.
+the migrations you provide.
 
 See https://github.com/agis/pglockanalyze-action/pull/5 for a sample PR demonstrating how one might use this action.
+
+### Provisioning database
+
+Most commonly you'll need to bring your database to proper state before
+analyzing the migrations. For example you might need to execute pre-existing
+migrations (i.e. those existing before the PR being analyzed). For this reason
+set `migrations_path` to the directory containing the migrations, together with
+`migration_command`. The action will then apply the pre-existing migrations
+before analysing the new ones. New files are detected by comparing the pull
+request's base and head commits.
+
+If you want to do the provisioning yourself, just set `input_files` instead.
+
 
 ## Status
 
@@ -45,8 +49,10 @@ This software is in *alpha* stage - *expect breakage* and rough edges.
 
 The `cli-flags` input defaults to `--commit` so that each migration is applied inside its own transaction.
 
-At least one of `input_files` or `migrations_path` must be provided, but not both. When `migrations_path` is used,
-`migration_command` must also be provided so the existing migrations can be applied.
+At least one of `input_files` or `migrations_path` must be provided, but not
+both. When `migrations_path` is used,
+`migration_command` must also be provided so the existing migrations can be
+applied.
 
 ---
 
@@ -75,6 +81,6 @@ jobs:
 
       - uses: agis/pglockanalyze-action@v1
         with:
-          migrations_path: "migrations/"
+          migrations_path: "migrations/*.sql"
           migration_command: "sql-migrate up"
 ```
