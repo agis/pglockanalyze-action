@@ -31,7 +31,7 @@ if [[ -n "${MIGRATIONS_PATH:-}" ]]; then
   fi
 
   # Compute migrations added in the current PR
-  mapfile -t NEW_MIGRATIONS < <(git diff --name-only --diff-filter=A "$BASE_SHA...$HEAD_SHA" -- "$MIGRATIONS_PATH" || true)
+  mapfile -t NEW_MIGRATIONS < <(git diff --name-only --diff-filter=A "$BASE_SHA...$HEAD_SHA" -- "$MIGRATIONS_PATH")
   if [[ ${#NEW_MIGRATIONS[@]} -eq 0 ]]; then
     echo "No new migrations found under '$MIGRATIONS_PATH'. Nothing to analyse."
     exit 0
