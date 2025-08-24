@@ -16,10 +16,11 @@ the files you provide.
 If your repository contains older migrations, set `migrations_path` together with
 `migration_command`. The action will automatically run the pre-existing migrations
 before analysing the new ones. New files are detected by comparing the pull request's
-base and head commits. By default `migration_command` runs **once per migration file**,
-appending the file path to the command. Set `once: true` to run the command **a single
- time** with `migrations_path` as its only argument, which is handy for tools that
-operate on a directory of migrations.
+base and head commits. `migration_command` runs once with `migrations_path` as its
+only argument, so it must accept a directory path. The action temporarily moves the
+new migrations away, executes the command to apply the existing ones, restores the
+new files, and finally analyses them. When no new migrations are found the action
+prints a diagnostic message and exits successfully.
 
 See https://github.com/agis/pglockanalyze-action/pull/5 for a sample PR demonstrating how one might use this action.
 
@@ -31,7 +32,7 @@ This software is in *alpha* stage - *expect breakage* and rough edges.
 
 | Name | Required | Default | Description |
 |------|----------|---------|-------------|
-| `input_files` | no | — | Newline-separated list of migration files to analyse, relative to the repo root. Ignored if `migrations_path` is set. |
+| `input_files` | no | — | Newline-separated list of migration files to analyse, relative to the repo root. Cannot be used together with `migrations_path`. |
 | `pgla-version` | no | latest | Version of pglockanalyze to use |
 | `cli-flags` | no | `--commit` | Extra flags to pass to pglockanalyze |
 | `db-host` | no | `localhost` | Host used in the connection string |
@@ -39,13 +40,13 @@ This software is in *alpha* stage - *expect breakage* and rough edges.
 | `db-name` | no | `pgladb` | Database to create/use for analysis |
 | `db-user` | no | `pglauser` | Role created for the run |
 | `db-password` | no | `pglapass` | Password for `db-user` |
-| `migrations_path` | no | — | Directory or glob pattern pointing to migration files |
-| `migration_command` | no | — | YAML object describing how to apply existing migrations. `command` sets the program to run and `once` (default `false`) controls whether the command runs once with `migrations_path` as an argument or once per existing migration file with the file path appended. |
+| `migrations_path` | no | — | Directory or glob pattern pointing to migration files. Requires `migration_command` and cannot be combined with `input_files`. |
+| `migration_command` | no | — | Command used to apply existing migrations. Runs once with `migrations_path` as its only argument. |
 
 The `cli-flags` input defaults to `--commit` so that each migration is applied inside its own transaction.
 
-At least one of `input_files` or `migrations_path` must be provided. If both are set, `migrations_path` is used only to
-apply the existing migrations when `migration_command` is specified.
+At least one of `input_files` or `migrations_path` must be provided, but not both. When `migrations_path` is used,
+`migration_command` must also be provided so the existing migrations can be applied.
 
 ---
 
@@ -74,8 +75,6 @@ jobs:
 
       - uses: agis/pglockanalyze-action@v1
         with:
-          migrations_path: "migrations/*.sql"
-          migration_command: |
-            command: ["sql-migrate", "up"]
-            once: true
+          migrations_path: "migrations/"
+          migration_command: "sql-migrate up"
 ```

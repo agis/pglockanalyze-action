@@ -36,20 +36,17 @@ inputs:
   input_files:
     description: |
       New-line separated list of migration **file paths** to analyse. Each file
-      is processed individually. Ignored if `migrations_path` is provided.
+      is processed individually. Cannot be used together with `migrations_path`.
     required: false
 
   migrations_path:
-    description: "Directory or glob pattern pointing to migration files"
+    description: "Directory or glob pattern pointing to migration files. Requires `migration_command` and cannot be combined with `input_files`"
     required: false
 
   migration_command:
-    description: >
-      YAML object describing how to apply existing migrations.
-      `command` specifies the program to run. When `once` is `true`, the
-      command runs a single time with `migrations_path` as an argument.
-      When `once` is `false` (the default), the command runs once per
-      pre-existing migration file with that file path appended.
+    description: |
+      Command used to apply existing migrations. Runs once with `migrations_path`
+      as its only argument. Required when `migrations_path` is set.
     required: false
 
   pglockanalyze-version:
@@ -84,12 +81,12 @@ runs:
           cargo install pglockanalyze --locked --force
         fi
 
-    - name: Ensure jq and yq are available
+    - name: Ensure jq is available
       shell: bash
       run: |
-        if ! command -v jq >/dev/null || ! command -v yq >/dev/null; then
+        if ! command -v jq >/dev/null; then
           sudo apt-get update -y
-          sudo apt-get install -y jq yq
+          sudo apt-get install -y jq
         fi
 
     - name: Run pglockanalyze and post annotations

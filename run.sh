@@ -11,6 +11,18 @@ if [[ -z "${BASE_SHA:-}" || -z "${HEAD_SHA:-}" ]]; then
   exit 1
 fi
 
+# Ensure the user doesn't mix incompatible inputs
+if [[ -n "${INPUT_FILES:-}" && -n "${MIGRATIONS_PATH:-}" ]]; then
+  echo "input_files and migrations_path cannot be used together" >&2
+  exit 1
+fi
+
+# When migrations_path is provided we require a command to apply them
+if [[ -n "${MIGRATIONS_PATH:-}" && -z "${MIGRATION_COMMAND:-}" ]]; then
+  echo "migration_command is required when migrations_path is set" >&2
+  exit 1
+fi
+
 # The action needs either explicit files or a path to search for migrations
 if [[ -z "${INPUT_FILES:-}" && -z "${MIGRATIONS_PATH:-}" ]]; then
   echo "Either input_files or migrations_path must be provided" >&2
@@ -22,43 +34,41 @@ if [[ -n "${MIGRATIONS_PATH:-}" ]]; then
   base_sha="$BASE_SHA"
   head_sha="$HEAD_SHA"
   mapfile -t NEW_MIGRATIONS < <(git diff --name-only --diff-filter=A "$base_sha...$head_sha" -- "$MIGRATIONS_PATH" || true)
-  mapfile -t ALL_MIGRATIONS < <(ls -1 "$MIGRATIONS_PATH" 2>/dev/null || true)
-  mapfile -t OLD_MIGRATIONS < <(comm -23 <(printf '%s\n' "${ALL_MIGRATIONS[@]}" | sort) <(printf '%s\n' "${NEW_MIGRATIONS[@]}" | sort))
 
-  if [[ -n "${MIGRATION_COMMAND:-}" ]]; then
-    # Temporarily move new migrations away so they are not applied
-    tmpdir="$(mktemp -d)"
-    for f in "${NEW_MIGRATIONS[@]}"; do
-      [ -f "$f" ] || continue
-      mv "$f" "$tmpdir/$(basename "$f")"
-    done
-
-    # Parse the YAML describing the command and whether it runs once
-    cmd_json="$(echo "$MIGRATION_COMMAND" | yq -o=json '.')"
-    mapfile -t CMD_ARR < <(echo "$cmd_json" | jq -r '.command | (if type=="array" then .[] else . end)')
-    run_once="$(echo "$cmd_json" | jq -r '.once // false')"
-
-    if [[ "$run_once" == "true" ]]; then
-      # Run the command a single time, passing the migrations path as an argument
-      "${CMD_ARR[@]}" "$MIGRATIONS_PATH"
-    else
-      # Run the command once for each pre-existing migration
-      for f in "${OLD_MIGRATIONS[@]}"; do
-        [ -f "$f" ] || continue
-        "${CMD_ARR[@]}" "$f"
-      done
-    fi
-
-    # Restore the new migrations to their original locations
-    for f in "${NEW_MIGRATIONS[@]}"; do
-      mv "$tmpdir/$(basename "$f")" "$f"
-    done
+  # Exit early when no new migrations were added
+  if [[ ${#NEW_MIGRATIONS[@]} -eq 0 ]]; then
+    echo "No new migrations found under '$MIGRATIONS_PATH'. Nothing to analyse."
+    exit 0
   fi
 
-  # If no explicit files were provided, analyse the new migrations
-  if [[ -z "${INPUT_FILES:-}" ]]; then
-    INPUT_FILES="$(printf '%s\n' "${NEW_MIGRATIONS[@]}")"
+  # Temporarily move new migrations away so they are not applied
+  tmpdir="$(mktemp -d)"
+  for f in "${NEW_MIGRATIONS[@]}"; do
+    [ -f "$f" ] || continue
+    mv "$f" "$tmpdir/$(basename "$f")"
+  done
+
+  # Resolve the directory to pass to the migration command
+  migration_dir="$MIGRATIONS_PATH"
+  if [[ ! -d "$migration_dir" ]]; then
+    migration_dir="$(dirname "$MIGRATIONS_PATH")"
   fi
+  if [[ ! -d "$migration_dir" ]]; then
+    echo "migrations_path must resolve to an existing directory" >&2
+    exit 1
+  fi
+
+  # Run the user-supplied command once, passing the directory
+  read -r -a CMD_ARR <<< "$MIGRATION_COMMAND"
+  "${CMD_ARR[@]}" "$migration_dir"
+
+  # Restore the new migrations to their original locations
+  for f in "${NEW_MIGRATIONS[@]}"; do
+    mv "$tmpdir/$(basename "$f")" "$f"
+  done
+
+  # Analyse the new migrations
+  INPUT_FILES="$(printf '%s\n' "${NEW_MIGRATIONS[@]}")"
 fi
 
 # Abort if we still have nothing to analyse
