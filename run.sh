@@ -1,72 +1,85 @@
 #!/usr/bin/env bash
+# Exit immediately on errors, treat unset variables as errors, and fail when any command in a pipeline fails
 set -euo pipefail
 
+# Work from the repository root
 cd "$GITHUB_WORKSPACE"
 
+# Ensure we are running in a pull request context
+if [[ -z "${BASE_SHA:-}" || -z "${HEAD_SHA:-}" ]]; then
+  echo "No base or head reference detected. Are we not executing in a PR?" >&2
+  exit 1
+fi
+
+# The action needs either explicit files or a path to search for migrations
 if [[ -z "${INPUT_FILES:-}" && -z "${MIGRATIONS_PATH:-}" ]]; then
   echo "Either input_files or migrations_path must be provided" >&2
   exit 1
 fi
 
 if [[ -n "${MIGRATIONS_PATH:-}" ]]; then
-  base_range=""
-  base_sha=${BASE_SHA:-}
-  head_sha=${HEAD_SHA:-HEAD}
-  if [[ -n "$base_sha" ]]; then
-    git fetch --depth=1 origin "$base_sha" >/dev/null 2>&1 || true
-    base_range="$base_sha"
-  else
-    base_ref=${GITHUB_BASE_REF:-main}
-    git fetch --depth=1 origin "$base_ref" >/dev/null 2>&1 || true
-    base_range="origin/$base_ref"
-  fi
+  # Determine which migrations are new in this pull request
+  base_sha="$BASE_SHA"
+  head_sha="$HEAD_SHA"
+  mapfile -t NEW_MIGRATIONS < <(git diff --name-only --diff-filter=A "$base_sha...$head_sha" -- "$MIGRATIONS_PATH" || true)
+  mapfile -t ALL_MIGRATIONS < <(ls -1 "$MIGRATIONS_PATH" 2>/dev/null || true)
+  mapfile -t OLD_MIGRATIONS < <(comm -23 <(printf '%s\n' "${ALL_MIGRATIONS[@]}" | sort) <(printf '%s\n' "${NEW_MIGRATIONS[@]}" | sort))
 
-  mapfile -t NEW_FILES < <(git diff --name-only --diff-filter=A "$base_range...$head_sha" -- "$MIGRATIONS_PATH" || true)
-  mapfile -t ALL_FILES < <(ls -1 "$MIGRATIONS_PATH" 2>/dev/null || true)
-  mapfile -t OLD_FILES < <(comm -23 <(printf '%s\n' "${ALL_FILES[@]}" | sort) <(printf '%s\n' "${NEW_FILES[@]}" | sort))
-
-  if [[ -n "${MIGRATION_COMMAND:-}" || -n "${MIGRATION_COMMAND_ONCE:-}" ]]; then
+  if [[ -n "${MIGRATION_COMMAND:-}" ]]; then
+    # Temporarily move new migrations away so they are not applied
     tmpdir="$(mktemp -d)"
-    for f in "${NEW_FILES[@]}"; do
+    for f in "${NEW_MIGRATIONS[@]}"; do
       [ -f "$f" ] || continue
-      mkdir -p "$tmpdir/$(dirname "$f")"
-      mv "$f" "$tmpdir/$f"
+      mv "$f" "$tmpdir/$(basename "$f")"
     done
 
-    if [[ -n "${MIGRATION_COMMAND_ONCE:-}" ]]; then
-      read -r -a CMD_ARR <<< "$MIGRATION_COMMAND_ONCE"
-      "${CMD_ARR[@]}"
-    elif [[ -n "${MIGRATION_COMMAND:-}" ]]; then
-      read -r -a CMD_ARR <<< "$MIGRATION_COMMAND"
-      for f in "${OLD_FILES[@]}"; do
+    # Parse the YAML describing the command and whether it runs once
+    cmd_json="$(echo "$MIGRATION_COMMAND" | yq -o=json '.')"
+    mapfile -t CMD_ARR < <(echo "$cmd_json" | jq -r '.command | (if type=="array" then .[] else . end)')
+    run_once="$(echo "$cmd_json" | jq -r '.once // false')"
+
+    if [[ "$run_once" == "true" ]]; then
+      # Run the command a single time, passing the migrations path as an argument
+      "${CMD_ARR[@]}" "$MIGRATIONS_PATH"
+    else
+      # Run the command once for each pre-existing migration
+      for f in "${OLD_MIGRATIONS[@]}"; do
         [ -f "$f" ] || continue
         "${CMD_ARR[@]}" "$f"
       done
     fi
 
-    for f in "${NEW_FILES[@]}"; do
-      mkdir -p "$(dirname "$f")"
-      mv "$tmpdir/$f" "$f"
+    # Restore the new migrations to their original locations
+    for f in "${NEW_MIGRATIONS[@]}"; do
+      mv "$tmpdir/$(basename "$f")" "$f"
     done
   fi
 
+  # If no explicit files were provided, analyse the new migrations
   if [[ -z "${INPUT_FILES:-}" ]]; then
-    INPUT_FILES="$(printf '%s\n' "${NEW_FILES[@]}")"
+    INPUT_FILES="$(printf '%s\n' "${NEW_MIGRATIONS[@]}")"
   fi
 fi
 
+# Abort if we still have nothing to analyse
 [[ -z "${INPUT_FILES:-}" ]] && { echo "No migration files to analyse" >&2; exit 1; }
 
+# Build the database connection string for pglockanalyze
 db_conn="postgresql://${DB_USER}:${DB_PASS}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
+
+# Split any extra CLI flags into an array
 read -r -a CLI_ARR <<< "${CLI_FLAGS:-}"
 
+# Process each migration file
 while IFS='' read -r relpath; do
   [[ -z "$relpath" ]] && continue
   expanded_path="$GITHUB_WORKSPACE/$relpath"
   [[ ! -f "$expanded_path" ]] && { echo "File not found: $relpath" >&2; continue; }
 
+  # Run pglockanalyze and capture JSON output
   result_json="$(pglockanalyze --db "$db_conn" --format=json "${CLI_ARR[@]}" "$expanded_path")"
 
+  # Emit a notice for every statement in the report
   echo "$result_json" | jq -c '.[]' | while read -r stmt; do
     start_line=$(echo "$stmt" | jq -r '.location.start_line')
     end_line=$(echo "$stmt" | jq -r '.location.end_line')

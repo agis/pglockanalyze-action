@@ -45,15 +45,11 @@ inputs:
 
   migration_command:
     description: >
-      Command executed once for each pre-existing migration file. The file path
-      is appended as the last argument when invoking the command.
-    required: false
-
-  migration_command_once:
-    description: >
-      Command executed a single time to apply all pre-existing migrations. The
-      command is invoked without extra file arguments and is useful for tools
-      that operate on migration directories.
+      YAML object describing how to apply existing migrations.
+      `command` specifies the program to run. When `once` is `true`, the
+      command runs a single time with `migrations_path` as an argument.
+      When `once` is `false` (the default), the command runs once per
+      pre-existing migration file with that file path appended.
     required: false
 
   pglockanalyze-version:
@@ -64,7 +60,6 @@ inputs:
     description: "Additional pglockanalyze CLI flags (optional)"
     required: false
     default: "--commit"
-
 
 runs:
   using: "composite"
@@ -89,12 +84,12 @@ runs:
           cargo install pglockanalyze --locked --force
         fi
 
-    - name: Ensure jq is available
+    - name: Ensure jq and yq are available
       shell: bash
       run: |
-        if ! command -v jq >/dev/null; then
+        if ! command -v jq >/dev/null || ! command -v yq >/dev/null; then
           sudo apt-get update -y
-          sudo apt-get install -y jq
+          sudo apt-get install -y jq yq
         fi
 
     - name: Run pglockanalyze and post annotations
@@ -109,8 +104,7 @@ runs:
         CLI_FLAGS:    ${{ inputs['cli-flags'] }}
         MIGRATIONS_PATH: ${{ inputs.migrations_path }}
         MIGRATION_COMMAND: ${{ inputs.migration_command }}
-        MIGRATION_COMMAND_ONCE: ${{ inputs.migration_command_once }}
-        BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
-        HEAD_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha }}
+        BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        HEAD_SHA: ${{ github.event.pull_request.head.sha }}
       run: |
         "${{ github.action_path }}/run.sh"

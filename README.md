@@ -13,13 +13,12 @@ You have to bring your own `postgres:` service container (any version), specify 
 connection parameters and the action executes pglockanalyze against it using
 the files you provide.
 
-If your repository contains older migrations, set `migrations_path` together
-with either `migration_command` or `migration_command_once`. The action will
-automatically run the pre-existing migrations before analysing the new ones.
-New files are detected by comparing the pull request's base and head commits
-(or merge group SHAs when using merge queues). `migration_command` runs **once
-per migration file**, appending the file path to the command. `migration_command_once`
-runs **only once** without any extra arguments, which is handy for tools that
+If your repository contains older migrations, set `migrations_path` together with
+`migration_command`. The action will automatically run the pre-existing migrations
+before analysing the new ones. New files are detected by comparing the pull request's
+base and head commits. By default `migration_command` runs **once per migration file**,
+appending the file path to the command. Set `once: true` to run the command **a single
+ time** with `migrations_path` as its only argument, which is handy for tools that
 operate on a directory of migrations.
 
 See https://github.com/agis/pglockanalyze-action/pull/5 for a sample PR demonstrating how one might use this action.
@@ -41,12 +40,12 @@ This software is in *alpha* stage - *expect breakage* and rough edges.
 | `db-user` | no | `pglauser` | Role created for the run |
 | `db-password` | no | `pglapass` | Password for `db-user` |
 | `migrations_path` | no | — | Directory or glob pattern pointing to migration files |
-| `migration_command` | no | — | Command executed once per existing migration file. The file path is passed as the last argument. |
-| `migration_command_once` | no | — | Command executed once for all existing migrations without any extra file arguments. |
+| `migration_command` | no | — | YAML object describing how to apply existing migrations. `command` sets the program to run and `once` (default `false`) controls whether the command runs once with `migrations_path` as an argument or once per existing migration file with the file path appended. |
 
 The `cli-flags` input defaults to `--commit` so that each migration is applied inside its own transaction.
 
-At least one of `input_files` or `migrations_path` must be provided. If both are set, `migrations_path` is used only to apply the existing migrations when `migration_command` or `migration_command_once` is specified.
+At least one of `input_files` or `migrations_path` must be provided. If both are set, `migrations_path` is used only to
+apply the existing migrations when `migration_command` is specified.
 
 ---
 
@@ -76,5 +75,7 @@ jobs:
       - uses: agis/pglockanalyze-action@v1
         with:
           migrations_path: "migrations/*.sql"
-          migration_command_once: "sql-migrate up"
+          migration_command: |
+            command: ["sql-migrate", "up"]
+            once: true
 ```
