@@ -94,16 +94,16 @@ runs:
     - name: Run pglockanalyze and post annotations
       shell: bash
       env:
-        DB_HOST:      ${{ inputs['db-host'] }}
-        DB_PORT:      ${{ inputs['db-port'] }}
-        DB_NAME:      ${{ inputs['db-name'] }}
-        DB_USER:      ${{ inputs['db-user'] }}
-        DB_PASS:      ${{ inputs['db-password'] }}
-        INPUT_FILES:  ${{ inputs.input_files }}
-        CLI_FLAGS:    ${{ inputs['cli-flags'] }}
-        MIGRATIONS_PATH: ${{ inputs.migrations_path }}
+        DB_HOST:           ${{ inputs['db-host'] }}
+        DB_PORT:           ${{ inputs['db-port'] }}
+        DB_NAME:           ${{ inputs['db-name'] }}
+        DB_USER:           ${{ inputs['db-user'] }}
+        DB_PASS:           ${{ inputs['db-password'] }}
+        INPUT_FILES:       ${{ inputs.input_files }}
+        CLI_FLAGS:         ${{ inputs['cli-flags'] }}
+        MIGRATIONS_PATH:   ${{ inputs.migrations_path }}
         MIGRATION_COMMAND: ${{ inputs.migration_command }}
-        BASE_SHA: ${{ github.event.pull_request.base.sha }}
-        HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        BASE_SHA:          ${{ github.base_ref }}
+        HEAD_SHA:          ${{ github.sha }}
       run: |
         "${{ github.action_path }}/run.sh"
