@@ -78,8 +78,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-        # necessary if `migrations_path` is set
-        fetch-depth: 0
+        with:
+          fetch-depth: 0 # necessary if `migrations_path` is set
 
       - uses: agis/pglockanalyze-action@v0.0.11
         with:
